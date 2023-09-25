@@ -1,0 +1,124 @@
+wfrom flask import Flask
+from flask_uploads import UploadSet, configure_uploads
+
+app = Flask(__name__)
+app.config['UPLOADED_PHOTOS_DEST'] = 'uploads'  # Set the destination folder for uploaded images
+photos = UploadSet('photos', ('jpg', 'jpeg', 'png', 'gif'))
+configure_uploads(app, photos)
+
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
+from wtforms import TextAreaField, SubmitField
+
+class PostForm(FlaskForm):
+    content = TextAreaField('Post Content')
+    image = FileField('Upload Image', validators=[FileAllowed(photos, 'Image files only!')])
+    submit = SubmitField('Submit')
+
+from flask import render_template, redirect, url_for, request, flash
+from flask_login import login_required, current_user
+from app.forms import PostForm
+from app.models import Post
+
+@app.route('/create_post', methods=['GET', 'POST'])
+@login_required
+def create_post():
+    form = PostForm()
+    if form.validate_on_submit():
+        content = form.content.data
+        image = form.image.data
+
+        # Save the image to the uploads folder
+        if image:
+            image_filename = photos.save(image)
+        else:
+            image_filename = None
+
+        # Create a new post
+        post = Post(content=content, image=image_filename, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Your post has been created!', 'success')
+        return redirect(url_for('index'))
+    return render_template('create_post.html', title='Create Post', form=form)
+
+@app.route('/')
+def index():
+    # Fetch and display posts with images
+    posts = Post.query.all()
+    return render_template('index.html', posts=posts)
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.content.label }}
+        {{ form.content(class="form-control", placeholder="What's on your mind?") }}
+    </div>
+    <div class="form-group">
+        {{ form.image.label }}
+        {{ form.image(class="form-control-file") }}
+    </div>
+    <div class="form-group">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+{% for post in posts %}
+<div class="post">
+    <p>{{ post.content }}</p>
+    {% if post.image %}
+    <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post Image">
+    {% endif %}
+</div>
+{% endfor %}
+
+
+
+Pagination in SQL involves retrieving a subset of query results to display a limited number of records per page. This is useful for improving the performance and user experience when dealing with large datasets. Pagination can be achieved using SQL's `LIMIT` and `OFFSET` clauses, but the exact syntax can vary depending on the database system you are using. I'll provide a general explanation followed by examples for some popular database systems.
+
+The basic idea of SQL pagination is to limit the number of rows returned by a query and specify the starting point for the result set. Here's how it works:
+
+- `LIMIT`: It specifies the maximum number of rows to return in the result set.
+- `OFFSET`: It specifies the number of rows to skip before starting to return rows.
+
+Let's say you have a table `posts` and you want to display 10 records per page, starting from the 11th record for the second page. You would use `LIMIT 10` and `OFFSET 10` to achieve this.
+
+Here are some examples for different database systems:
+
+**1. PostgreSQL:**
+
+```sql
+SELECT * FROM posts
+ORDER BY post_date DESC
+LIMIT 10
+OFFSET 10;
+```
+
+**2. MySQL:**
+
+```sql
+SELECT * FROM posts
+ORDER BY post_date DESC
+LIMIT 10 OFFSET 10;
+```
+
+**3. SQLite:**
+
+```sql
+SELECT * FROM posts
+ORDER BY post_date DESC
+LIMIT 10 OFFSET 10;
+```
+
+**4. Microsoft SQL Server:**
+
+```sql
+SELECT * FROM (
+  SELECT *, ROW_NUMBER() OVER (ORDER BY post_date DESC) AS row_num
+  FROM posts
+) AS temp
+WHERE row_num BETWEEN 11 AND 20;
+```
+
+In the SQL Server example, we're using a subquery with `ROW_NUMBER()` to assign a row number to each row in the result set and then filtering the rows with `BETWEEN` to get the desired page.
+
+Please note that the specific syntax may vary depending on the database system you are using. Additionally, keep in mind that relying solely on `OFFSET` and `LIMIT` for pagination can be inefficient for very large datasets because the database still has to process and skip the skipped rows. For very large datasets, you may consider using more advanced techniques like keyset pagination or cursor pagination.

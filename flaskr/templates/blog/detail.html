@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <img src="{{ url_for('blog.uploaded_file', filename=post['image']) }}">
+    <h1>{{ post['title'] }}</h1>
+    <p class="body">{{ post['body'] }}</p>
+    <span>by {{post['username']}} on {{post['created'].strftime('%Y-%m-%d')}}</span>
+    <p><a class="action" href="{{ url_for('blog.comment', id=post['id']) }}">Write a Comment</a> {{post['like']}} likes</p>
+    {% for comment in comments %}
+        <p id="comment">{{ comment['body'] }}</p>
+        <p id="comment_info">{{ comment['created'].strftime('%Y-%m-%d') }} by {{ comment['username'] }}</p>
+        {% endfor %}
+{% endblock %}
